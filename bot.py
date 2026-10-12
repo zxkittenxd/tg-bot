@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import sqlite3
@@ -13,20 +14,20 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
-# ÐÐ°Ð³ÑÑÐ¶Ð°ÐµÐ¼ Ð¿ÐµÑÐµÐ¼ÐµÐ½Ð½ÑÐµ Ð¾ÐºÑÑÐ¶ÐµÐ½Ð¸Ñ
+# ÃÂÃÂ°ÃÂ³ÃÂÃÂÃÂ¶ÃÂ°ÃÂµÃÂ¼ ÃÂ¿ÃÂµÃÂÃÂµÃÂ¼ÃÂµÃÂ½ÃÂ½ÃÂÃÂµ ÃÂ¾ÃÂºÃÂÃÂÃÂ¶ÃÂµÃÂ½ÃÂ¸ÃÂ
 load_dotenv()
 
-# ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ° Ð»Ð¾Ð³Ð¸ÑÐ¾Ð²Ð°Ð½Ð¸Ñ
+# ÃÂÃÂ°ÃÂÃÂÃÂÃÂ¾ÃÂ¹ÃÂºÃÂ° ÃÂ»ÃÂ¾ÃÂ³ÃÂ¸ÃÂÃÂ¾ÃÂ²ÃÂ°ÃÂ½ÃÂ¸ÃÂ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ÐÐ¾Ð½ÑÐ¸Ð³ÑÑÐ°ÑÐ¸Ñ
+# ÃÂÃÂ¾ÃÂ½ÃÂÃÂ¸ÃÂ³ÃÂÃÂÃÂ°ÃÂÃÂ¸ÃÂ
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
 SUBSCRIPTION_PRICE = int(os.getenv("SUBSCRIPTION_PRICE", "100"))
 SUBSCRIPTION_DAYS = int(os.getenv("SUBSCRIPTION_DAYS", "30"))
 
-# ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ¸ webhook Ð´Ð»Ñ Render
+# ÃÂÃÂ°ÃÂÃÂÃÂÃÂ¾ÃÂ¹ÃÂºÃÂ¸ webhook ÃÂ´ÃÂ»ÃÂ Render
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://tg-bot-dmhf.onrender.com")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
@@ -34,14 +35,14 @@ WEBAPP_HOST = os.getenv("WEBAPP_HOST", "0.0.0.0")
 WEBAPP_PORT = int(os.getenv("PORT", "10000"))
 
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN Ð½Ðµ ÑÑÑÐ°Ð½Ð¾Ð²Ð»ÐµÐ½ Ð² Ð¿ÐµÑÐµÐ¼ÐµÐ½Ð½ÑÑ Ð¾ÐºÑÑÐ¶ÐµÐ½Ð¸Ñ")
+    raise ValueError("BOT_TOKEN ÃÂ½ÃÂµ ÃÂÃÂÃÂÃÂ°ÃÂ½ÃÂ¾ÃÂ²ÃÂ»ÃÂµÃÂ½ ÃÂ² ÃÂ¿ÃÂµÃÂÃÂµÃÂ¼ÃÂµÃÂ½ÃÂ½ÃÂÃÂ ÃÂ¾ÃÂºÃÂÃÂÃÂ¶ÃÂµÃÂ½ÃÂ¸ÃÂ")
 
-# ÐÐ½Ð¸ÑÐ¸Ð°Ð»Ð¸Ð·Ð°ÑÐ¸Ñ Ð±Ð¾ÑÐ°
+# ÃÂÃÂ½ÃÂ¸ÃÂÃÂ¸ÃÂ°ÃÂ»ÃÂ¸ÃÂ·ÃÂ°ÃÂÃÂ¸ÃÂ ÃÂ±ÃÂ¾ÃÂÃÂ°
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# ÐÐ°Ð·Ð° Ð´Ð°Ð½Ð½ÑÑ
+# ÃÂÃÂ°ÃÂ·ÃÂ° ÃÂ´ÃÂ°ÃÂ½ÃÂ½ÃÂÃÂ
 def init_db():
     conn = sqlite3.connect('bot.db')
     cursor = conn.cursor()
@@ -132,33 +133,33 @@ def is_subscribed(user_id: int) -> bool:
 def get_subscription_info(user_id: int) -> str:
     user = get_user(user_id)
     if not user or not user['subscription_end']:
-        return "â Ð£ Ð²Ð°Ñ Ð½ÐµÑ Ð°ÐºÑÐ¸Ð²Ð½Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸"
+        return "Ã¢ÂÂ ÃÂ£ ÃÂ²ÃÂ°ÃÂ ÃÂ½ÃÂµÃÂ ÃÂ°ÃÂºÃÂÃÂ¸ÃÂ²ÃÂ½ÃÂ¾ÃÂ¹ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ¸"
     
     end_date = datetime.fromisoformat(user['subscription_end'])
     if end_date <= datetime.now():
-        return "â ÐÐ°ÑÐ° Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ° Ð¸ÑÑÐµÐºÐ»Ð°"
+        return "Ã¢ÂÂ ÃÂÃÂ°ÃÂÃÂ° ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ° ÃÂ¸ÃÂÃÂÃÂµÃÂºÃÂ»ÃÂ°"
     
     days_left = (end_date - datetime.now()).days
-    return f"â ÐÐ¾Ð´Ð¿Ð¸ÑÐºÐ° Ð°ÐºÑÐ¸Ð²Ð½Ð° Ð´Ð¾ {end_date.strftime('%d.%m.%Y')} (Ð¾ÑÑÐ°Ð»Ð¾ÑÑ {days_left} Ð´Ð½.)"
+    return f"Ã¢ÂÂ ÃÂÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ° ÃÂ°ÃÂºÃÂÃÂ¸ÃÂ²ÃÂ½ÃÂ° ÃÂ´ÃÂ¾ {end_date.strftime('%d.%m.%Y')} (ÃÂ¾ÃÂÃÂÃÂ°ÃÂ»ÃÂ¾ÃÂÃÂ {days_left} ÃÂ´ÃÂ½.)"
 
-# ÐÐ»Ð°Ð²Ð¸Ð°ÑÑÑÑ
+# ÃÂÃÂ»ÃÂ°ÃÂ²ÃÂ¸ÃÂ°ÃÂÃÂÃÂÃÂ
 def main_keyboard(subscribed: bool = False) -> InlineKeyboardMarkup:
     buttons = []
     
     if not subscribed:
         buttons.append([
-            InlineKeyboardButton(text="ð³ ÐÑÐ¿Ð¸ÑÑ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑ", callback_data="buy_subscription")
+            InlineKeyboardButton(text="Ã°ÂÂÂ³ ÃÂÃÂÃÂ¿ÃÂ¸ÃÂÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ", callback_data="buy_subscription")
         ])
     
     buttons.extend([
-        [InlineKeyboardButton(text="ð ÐÐ¾Ñ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°", callback_data="my_subscription")],
-        [InlineKeyboardButton(text="â¹ï¸ Ð Ð±Ð¾ÑÐµ", callback_data="about")],
-        [InlineKeyboardButton(text="ð¨âð» ÐÐ¾Ð´Ð´ÐµÑÐ¶ÐºÐ°", callback_data="support")]
+        [InlineKeyboardButton(text="Ã°ÂÂÂ ÃÂÃÂ¾ÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ°", callback_data="my_subscription")],
+        [InlineKeyboardButton(text="Ã¢ÂÂ¹Ã¯Â¸Â ÃÂ ÃÂ±ÃÂ¾ÃÂÃÂµ", callback_data="about")],
+        [InlineKeyboardButton(text="Ã°ÂÂÂ¨Ã¢ÂÂÃ°ÂÂÂ» ÃÂÃÂ¾ÃÂ´ÃÂ´ÃÂµÃÂÃÂ¶ÃÂºÃÂ°", callback_data="support")]
     ])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-# ÐÐ±ÑÐ°Ð±Ð¾ÑÑÐ¸ÐºÐ¸ ÐºÐ¾Ð¼Ð°Ð½Ð´
+# ÃÂÃÂ±ÃÂÃÂ°ÃÂ±ÃÂ¾ÃÂÃÂÃÂ¸ÃÂºÃÂ¸ ÃÂºÃÂ¾ÃÂ¼ÃÂ°ÃÂ½ÃÂ´
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     user_id = message.from_user.id
@@ -170,14 +171,14 @@ async def cmd_start(message: Message):
     subscribed = is_subscribed(user_id)
     
     text = (
-        f"ð ÐÑÐ¸Ð²ÐµÑ, {first_name}!\n\n"
-        f"Ð¯ Ð´ÐµÐ¼Ð¾-Ð±Ð¾Ñ Ñ ÑÐ¸ÑÑÐµÐ¼Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐ¾Ðº. "
-        f"ÐÑÐ¿Ð¸ÑÐµ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑ, ÑÑÐ¾Ð±Ñ Ð¿Ð¾Ð»ÑÑÐ¸ÑÑ Ð´Ð¾ÑÑÑÐ¿ Ðº ÑÐºÑÐºÐ»ÑÐ·Ð¸Ð²Ð½ÑÐ¼ ÑÑÐ½ÐºÑÐ¸ÑÐ¼.\n\n"
-        f"ð¡ Ð§ÑÐ¾ Ð´Ð°ÑÑ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°:\n"
-        f"â¢ ÐÐ¾ÑÑÑÐ¿ Ðº Ð¿ÑÐµÐ¼Ð¸ÑÐ¼-ÐºÐ¾Ð½ÑÐµÐ½ÑÑ\n"
-        f"â¢ ÐÑÐ¸Ð¾ÑÐ¸ÑÐµÑÐ½Ð°Ñ Ð¿Ð¾Ð´Ð´ÐµÑÐ¶ÐºÐ°\n"
-        f"â¢ Ð­ÐºÑÐºÐ»ÑÐ·Ð¸Ð²Ð½ÑÐµ ÑÑÐ½ÐºÑÐ¸Ð¸\n\n"
-        f"ð° Ð¡ÑÐ¾Ð¸Ð¼Ð¾ÑÑÑ: {SUBSCRIPTION_PRICE}â½/{SUBSCRIPTION_DAYS} Ð´Ð½ÐµÐ¹"
+        f"Ã°ÂÂÂ ÃÂÃÂÃÂ¸ÃÂ²ÃÂµÃÂ, {first_name}!\n\n"
+        f"ÃÂ¯ ÃÂ´ÃÂµÃÂ¼ÃÂ¾-ÃÂ±ÃÂ¾ÃÂ ÃÂ ÃÂÃÂ¸ÃÂÃÂÃÂµÃÂ¼ÃÂ¾ÃÂ¹ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂ¾ÃÂº. "
+        f"ÃÂÃÂÃÂ¿ÃÂ¸ÃÂÃÂµ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ, ÃÂÃÂÃÂ¾ÃÂ±ÃÂ ÃÂ¿ÃÂ¾ÃÂ»ÃÂÃÂÃÂ¸ÃÂÃÂ ÃÂ´ÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂº ÃÂÃÂºÃÂÃÂºÃÂ»ÃÂÃÂ·ÃÂ¸ÃÂ²ÃÂ½ÃÂÃÂ¼ ÃÂÃÂÃÂ½ÃÂºÃÂÃÂ¸ÃÂÃÂ¼.\n\n"
+        f"Ã°ÂÂÂ¡ ÃÂ§ÃÂÃÂ¾ ÃÂ´ÃÂ°ÃÂÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ°:\n"
+        f"Ã¢ÂÂ¢ ÃÂÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂº ÃÂ¿ÃÂÃÂµÃÂ¼ÃÂ¸ÃÂÃÂ¼-ÃÂºÃÂ¾ÃÂ½ÃÂÃÂµÃÂ½ÃÂÃÂ\n"
+        f"Ã¢ÂÂ¢ ÃÂÃÂÃÂ¸ÃÂ¾ÃÂÃÂ¸ÃÂÃÂµÃÂÃÂ½ÃÂ°ÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ´ÃÂµÃÂÃÂ¶ÃÂºÃÂ°\n"
+        f"Ã¢ÂÂ¢ ÃÂ­ÃÂºÃÂÃÂºÃÂ»ÃÂÃÂ·ÃÂ¸ÃÂ²ÃÂ½ÃÂÃÂµ ÃÂÃÂÃÂ½ÃÂºÃÂÃÂ¸ÃÂ¸\n\n"
+        f"Ã°ÂÂÂ° ÃÂ¡ÃÂÃÂ¾ÃÂ¸ÃÂ¼ÃÂ¾ÃÂÃÂÃÂ: {SUBSCRIPTION_PRICE}Ã¢ÂÂ½/{SUBSCRIPTION_DAYS} ÃÂ´ÃÂ½ÃÂµÃÂ¹"
     )
     
     await message.answer(text, reply_markup=main_keyboard(subscribed))
@@ -185,12 +186,12 @@ async def cmd_start(message: Message):
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     text = (
-        "ð ÐÐ¾ÑÑÑÐ¿Ð½ÑÐµ ÐºÐ¾Ð¼Ð°Ð½Ð´Ñ:\n\n"
-        "/start - ÐÐ»Ð°Ð²Ð½Ð¾Ðµ Ð¼ÐµÐ½Ñ\n"
-        "/help - ÐÐ¾Ð¼Ð¾ÑÑ\n"
-        "/status - Ð¡ÑÐ°ÑÑÑ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸\n"
-        "/buy - ÐÑÐ¿Ð¸ÑÑ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑ\n"
-        "/premium - ÐÑÐµÐ¼Ð¸ÑÐ¼-ÐºÐ¾Ð½ÑÐµÐ½Ñ"
+        "Ã°ÂÂÂ ÃÂÃÂ¾ÃÂÃÂÃÂÃÂ¿ÃÂ½ÃÂÃÂµ ÃÂºÃÂ¾ÃÂ¼ÃÂ°ÃÂ½ÃÂ´ÃÂ:\n\n"
+        "/start - ÃÂÃÂ»ÃÂ°ÃÂ²ÃÂ½ÃÂ¾ÃÂµ ÃÂ¼ÃÂµÃÂ½ÃÂ\n"
+        "/help - ÃÂÃÂ¾ÃÂ¼ÃÂ¾ÃÂÃÂ\n"
+        "/status - ÃÂ¡ÃÂÃÂ°ÃÂÃÂÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ¸\n"
+        "/buy - ÃÂÃÂÃÂ¿ÃÂ¸ÃÂÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ\n"
+        "/premium - ÃÂÃÂÃÂµÃÂ¼ÃÂ¸ÃÂÃÂ¼-ÃÂºÃÂ¾ÃÂ½ÃÂÃÂµÃÂ½ÃÂ"
     )
     await message.answer(text)
 
@@ -210,38 +211,38 @@ async def cmd_premium(message: Message):
     
     if not is_subscribed(user_id):
         await message.answer(
-            "â Ð£ Ð²Ð°Ñ Ð½ÐµÑ Ð°ÐºÑÐ¸Ð²Ð½Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸.\n"
-            "ÐÑÐ¿Ð¸ÑÐµ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑ, ÑÑÐ¾Ð±Ñ Ð¿Ð¾Ð»ÑÑÐ¸ÑÑ Ð´Ð¾ÑÑÑÐ¿ Ðº Ð¿ÑÐµÐ¼Ð¸ÑÐ¼-ÐºÐ¾Ð½ÑÐµÐ½ÑÑ.",
+            "Ã¢ÂÂ ÃÂ£ ÃÂ²ÃÂ°ÃÂ ÃÂ½ÃÂµÃÂ ÃÂ°ÃÂºÃÂÃÂ¸ÃÂ²ÃÂ½ÃÂ¾ÃÂ¹ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ¸.\n"
+            "ÃÂÃÂÃÂ¿ÃÂ¸ÃÂÃÂµ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ, ÃÂÃÂÃÂ¾ÃÂ±ÃÂ ÃÂ¿ÃÂ¾ÃÂ»ÃÂÃÂÃÂ¸ÃÂÃÂ ÃÂ´ÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂº ÃÂ¿ÃÂÃÂµÃÂ¼ÃÂ¸ÃÂÃÂ¼-ÃÂºÃÂ¾ÃÂ½ÃÂÃÂµÃÂ½ÃÂÃÂ.",
             reply_markup=main_keyboard(False)
         )
         return
     
     text = (
-        "ð ÐÑÐµÐ¼Ð¸ÑÐ¼-ÐºÐ¾Ð½ÑÐµÐ½Ñ:\n\n"
-        "Ð¡Ð¿Ð°ÑÐ¸Ð±Ð¾ Ð·Ð° Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑ! ÐÐ¾Ñ Ð²Ð°ÑÐ¸ Ð¿ÑÐµÐ¸Ð¼ÑÑÐµÑÑÐ²Ð°:\n\n"
-        "â ÐÐ¾ÑÑÑÐ¿ Ðº ÑÐºÑÐºÐ»ÑÐ·Ð¸Ð²Ð½ÑÐ¼ Ð¼Ð°ÑÐµÑÐ¸Ð°Ð»Ð°Ð¼\n"
-        "â ÐÑÐ¸Ð¾ÑÐ¸ÑÐµÑÐ½Ð°Ñ Ð¿Ð¾Ð´Ð´ÐµÑÐ¶ÐºÐ°\n"
-        "â ÐÐ¾Ð²ÑÐµ ÑÑÐ½ÐºÑÐ¸Ð¸ Ð¿ÐµÑÐ²ÑÐ¼\n\n"
-        "Ð¡Ð»ÐµÐ´Ð¸ÑÐµ Ð·Ð° Ð¾Ð±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸ÑÐ¼Ð¸!"
+        "Ã°ÂÂÂ ÃÂÃÂÃÂµÃÂ¼ÃÂ¸ÃÂÃÂ¼-ÃÂºÃÂ¾ÃÂ½ÃÂÃÂµÃÂ½ÃÂ:\n\n"
+        "ÃÂ¡ÃÂ¿ÃÂ°ÃÂÃÂ¸ÃÂ±ÃÂ¾ ÃÂ·ÃÂ° ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ! ÃÂÃÂ¾ÃÂ ÃÂ²ÃÂ°ÃÂÃÂ¸ ÃÂ¿ÃÂÃÂµÃÂ¸ÃÂ¼ÃÂÃÂÃÂµÃÂÃÂÃÂ²ÃÂ°:\n\n"
+        "Ã¢ÂÂ ÃÂÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂº ÃÂÃÂºÃÂÃÂºÃÂ»ÃÂÃÂ·ÃÂ¸ÃÂ²ÃÂ½ÃÂÃÂ¼ ÃÂ¼ÃÂ°ÃÂÃÂµÃÂÃÂ¸ÃÂ°ÃÂ»ÃÂ°ÃÂ¼\n"
+        "Ã¢ÂÂ ÃÂÃÂÃÂ¸ÃÂ¾ÃÂÃÂ¸ÃÂÃÂµÃÂÃÂ½ÃÂ°ÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ´ÃÂµÃÂÃÂ¶ÃÂºÃÂ°\n"
+        "Ã¢ÂÂ ÃÂÃÂ¾ÃÂ²ÃÂÃÂµ ÃÂÃÂÃÂ½ÃÂºÃÂÃÂ¸ÃÂ¸ ÃÂ¿ÃÂµÃÂÃÂ²ÃÂÃÂ¼\n\n"
+        "ÃÂ¡ÃÂ»ÃÂµÃÂ´ÃÂ¸ÃÂÃÂµ ÃÂ·ÃÂ° ÃÂ¾ÃÂ±ÃÂ½ÃÂ¾ÃÂ²ÃÂ»ÃÂµÃÂ½ÃÂ¸ÃÂÃÂ¼ÃÂ¸!"
     )
     await message.answer(text)
 
-# ÐÑÐ¿ÑÐ°Ð²ÐºÐ° ÑÑÑÑÐ° Ð½Ð° Ð¾Ð¿Ð»Ð°ÑÑ
+# ÃÂÃÂÃÂ¿ÃÂÃÂ°ÃÂ²ÃÂºÃÂ° ÃÂÃÂÃÂÃÂÃÂ° ÃÂ½ÃÂ° ÃÂ¾ÃÂ¿ÃÂ»ÃÂ°ÃÂÃÂ
 async def send_invoice(message: Message):
     user_id = message.from_user.id
     
     if is_subscribed(user_id):
         await message.answer(
-            "â Ð£ Ð²Ð°Ñ ÑÐ¶Ðµ ÐµÑÑÑ Ð°ÐºÑÐ¸Ð²Ð½Ð°Ñ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°!\n"
+            "Ã¢ÂÂ ÃÂ£ ÃÂ²ÃÂ°ÃÂ ÃÂÃÂ¶ÃÂµ ÃÂµÃÂÃÂÃÂ ÃÂ°ÃÂºÃÂÃÂ¸ÃÂ²ÃÂ½ÃÂ°ÃÂ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ°!\n"
             + get_subscription_info(user_id)
         )
         return
     
-    prices = [LabeledPrice(label="ÐÐ¾Ð´Ð¿Ð¸ÑÐºÐ°", amount=SUBSCRIPTION_PRICE * 100)]
+    prices = [LabeledPrice(label="ÃÂÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ°", amount=SUBSCRIPTION_PRICE * 100)]
     
     await message.answer_invoice(
-        title="ÐÐ¾Ð´Ð¿Ð¸ÑÐºÐ° Ð½Ð° Ð±Ð¾ÑÐ°",
-        description=f"ÐÐ¾ÑÑÑÐ¿ Ðº Ð¿ÑÐµÐ¼Ð¸ÑÐ¼-ÑÑÐ½ÐºÑÐ¸ÑÐ¼ Ð½Ð° {SUBSCRIPTION_DAYS} Ð´Ð½ÐµÐ¹",
+        title="ÃÂÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ° ÃÂ½ÃÂ° ÃÂ±ÃÂ¾ÃÂÃÂ°",
+        description=f"ÃÂÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂº ÃÂ¿ÃÂÃÂµÃÂ¼ÃÂ¸ÃÂÃÂ¼-ÃÂÃÂÃÂ½ÃÂºÃÂÃÂ¸ÃÂÃÂ¼ ÃÂ½ÃÂ° {SUBSCRIPTION_DAYS} ÃÂ´ÃÂ½ÃÂµÃÂ¹",
         payload=f"subscription_{user_id}",
         currency="RUB",
         prices=prices,
@@ -254,18 +255,18 @@ async def send_invoice(message: Message):
         is_flexible=False
     )
 
-# ÐÑÐµÐ´Ð²Ð°ÑÐ¸ÑÐµÐ»ÑÐ½Ð°Ñ Ð¿ÑÐ¾Ð²ÐµÑÐºÐ° Ð¿Ð»Ð°ÑÐµÐ¶Ð°
+# ÃÂÃÂÃÂµÃÂ´ÃÂ²ÃÂ°ÃÂÃÂ¸ÃÂÃÂµÃÂ»ÃÂÃÂ½ÃÂ°ÃÂ ÃÂ¿ÃÂÃÂ¾ÃÂ²ÃÂµÃÂÃÂºÃÂ° ÃÂ¿ÃÂ»ÃÂ°ÃÂÃÂµÃÂ¶ÃÂ°
 @dp.pre_checkout_query()
 async def pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
-# Ð£ÑÐ¿ÐµÑÐ½ÑÐ¹ Ð¿Ð»Ð°ÑÑÐ¶
+# ÃÂ£ÃÂÃÂ¿ÃÂµÃÂÃÂ½ÃÂÃÂ¹ ÃÂ¿ÃÂ»ÃÂ°ÃÂÃÂÃÂ¶
 @dp.message(F.successful_payment)
 async def successful_payment(message: Message):
     user_id = message.from_user.id
     payment = message.successful_payment
     
-    # Ð¡Ð¾ÑÑÐ°Ð½ÑÐµÐ¼ Ð¿Ð»Ð°ÑÑÐ¶ Ð² Ð±Ð°Ð·Ñ
+    # ÃÂ¡ÃÂ¾ÃÂÃÂÃÂ°ÃÂ½ÃÂÃÂµÃÂ¼ ÃÂ¿ÃÂ»ÃÂ°ÃÂÃÂÃÂ¶ ÃÂ² ÃÂ±ÃÂ°ÃÂ·ÃÂ
     conn = sqlite3.connect('bot.db')
     cursor = conn.cursor()
     cursor.execute(
@@ -278,18 +279,18 @@ async def successful_payment(message: Message):
     conn.commit()
     conn.close()
     
-    # ÐÐºÑÐ¸Ð²Ð¸ÑÑÐµÐ¼ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑ
+    # ÃÂÃÂºÃÂÃÂ¸ÃÂ²ÃÂ¸ÃÂÃÂÃÂµÃÂ¼ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ
     end_date = activate_subscription(user_id)
     
     text = (
-        "â ÐÐ¿Ð»Ð°ÑÐ° Ð¿ÑÐ¾ÑÐ»Ð° ÑÑÐ¿ÐµÑÐ½Ð¾!\n\n"
-        f"ð ÐÐ°ÑÐ° Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ° Ð°ÐºÑÐ¸Ð²Ð¸ÑÐ¾Ð²Ð°Ð½Ð° Ð´Ð¾ {end_date.strftime('%d.%m.%Y')}\n\n"
-        "Ð¢ÐµÐ¿ÐµÑÑ Ñ Ð²Ð°Ñ ÐµÑÑÑ Ð´Ð¾ÑÑÑÐ¿ ÐºÐ¾ Ð²ÑÐµÐ¼ Ð¿ÑÐµÐ¼Ð¸ÑÐ¼-ÑÑÐ½ÐºÑÐ¸ÑÐ¼!"
+        "Ã¢ÂÂ ÃÂÃÂ¿ÃÂ»ÃÂ°ÃÂÃÂ° ÃÂ¿ÃÂÃÂ¾ÃÂÃÂ»ÃÂ° ÃÂÃÂÃÂ¿ÃÂµÃÂÃÂ½ÃÂ¾!\n\n"
+        f"Ã°ÂÂÂ ÃÂÃÂ°ÃÂÃÂ° ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂºÃÂ° ÃÂ°ÃÂºÃÂÃÂ¸ÃÂ²ÃÂ¸ÃÂÃÂ¾ÃÂ²ÃÂ°ÃÂ½ÃÂ° ÃÂ´ÃÂ¾ {end_date.strftime('%d.%m.%Y')}\n\n"
+        "ÃÂ¢ÃÂµÃÂ¿ÃÂµÃÂÃÂ ÃÂ ÃÂ²ÃÂ°ÃÂ ÃÂµÃÂÃÂÃÂ ÃÂ´ÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂºÃÂ¾ ÃÂ²ÃÂÃÂµÃÂ¼ ÃÂ¿ÃÂÃÂµÃÂ¼ÃÂ¸ÃÂÃÂ¼-ÃÂÃÂÃÂ½ÃÂºÃÂÃÂ¸ÃÂÃÂ¼!"
     )
     
     await message.answer(text, reply_markup=main_keyboard(True))
 
-# ÐÐ±ÑÐ°Ð±Ð¾ÑÑÐ¸ÐºÐ¸ callback-Ð·Ð°Ð¿ÑÐ¾ÑÐ¾Ð²
+# ÃÂÃÂ±ÃÂÃÂ°ÃÂ±ÃÂ¾ÃÂÃÂÃÂ¸ÃÂºÃÂ¸ callback-ÃÂ·ÃÂ°ÃÂ¿ÃÂÃÂ¾ÃÂÃÂ¾ÃÂ²
 @dp.callback_query(F.data == "buy_subscription")
 async def callback_buy(callback: CallbackQuery):
     await callback.message.delete()
@@ -304,53 +305,57 @@ async def callback_my_subscription(callback: CallbackQuery):
 @dp.callback_query(F.data == "about")
 async def callback_about(callback: CallbackQuery):
     text = (
-        "â¹ï¸ Ð Ð±Ð¾ÑÐµ:\n\n"
-        "Ð­ÑÐ¾ Ð´ÐµÐ¼Ð¾-Ð±Ð¾Ñ Ñ ÑÐ¸ÑÑÐµÐ¼Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐ¾Ðº.\n"
-        "ÐÐ½ Ð¿Ð¾ÐºÐ°Ð·ÑÐ²Ð°ÐµÑ, ÐºÐ°Ðº Ð¼Ð¾Ð¶Ð½Ð¾ Ð¼Ð¾Ð½ÐµÑÐ¸Ð·Ð¸ÑÐ¾Ð²Ð°ÑÑ Telegram-Ð±Ð¾ÑÐ°.\n\n"
-        "ð¡ ÐÐ´ÐµÐ¸ Ð´Ð»Ñ Ð¼Ð¾Ð½ÐµÑÐ¸Ð·Ð°ÑÐ¸Ð¸:\n"
-        "â¢ Ð­ÐºÑÐºÐ»ÑÐ·Ð¸Ð²Ð½ÑÐ¹ ÐºÐ¾Ð½ÑÐµÐ½Ñ\n"
-        "â¢ ÐÐ²ÑÐ¾Ð¼Ð°ÑÐ¸Ð·Ð°ÑÐ¸Ñ Ð·Ð°Ð´Ð°Ñ\n"
-        "â¢ ÐÐ¾ÑÑÑÐ¿ Ðº Ð±Ð°Ð·Ðµ Ð´Ð°Ð½Ð½ÑÑ\n"
-        "â¢ ÐÐµÑÑÐ¾Ð½Ð°Ð»ÑÐ½ÑÐµ ÐºÐ¾Ð½ÑÑÐ»ÑÑÐ°ÑÐ¸Ð¸"
+        "Ã¢ÂÂ¹Ã¯Â¸Â ÃÂ ÃÂ±ÃÂ¾ÃÂÃÂµ:\n\n"
+        "ÃÂ­ÃÂÃÂ¾ ÃÂ´ÃÂµÃÂ¼ÃÂ¾-ÃÂ±ÃÂ¾ÃÂ ÃÂ ÃÂÃÂ¸ÃÂÃÂÃÂµÃÂ¼ÃÂ¾ÃÂ¹ ÃÂ¿ÃÂ¾ÃÂ´ÃÂ¿ÃÂ¸ÃÂÃÂ¾ÃÂº.\n"
+        "ÃÂÃÂ½ ÃÂ¿ÃÂ¾ÃÂºÃÂ°ÃÂ·ÃÂÃÂ²ÃÂ°ÃÂµÃÂ, ÃÂºÃÂ°ÃÂº ÃÂ¼ÃÂ¾ÃÂ¶ÃÂ½ÃÂ¾ ÃÂ¼ÃÂ¾ÃÂ½ÃÂµÃÂÃÂ¸ÃÂ·ÃÂ¸ÃÂÃÂ¾ÃÂ²ÃÂ°ÃÂÃÂ Telegram-ÃÂ±ÃÂ¾ÃÂÃÂ°.\n\n"
+        "Ã°ÂÂÂ¡ ÃÂÃÂ´ÃÂµÃÂ¸ ÃÂ´ÃÂ»ÃÂ ÃÂ¼ÃÂ¾ÃÂ½ÃÂµÃÂÃÂ¸ÃÂ·ÃÂ°ÃÂÃÂ¸ÃÂ¸:\n"
+        "Ã¢ÂÂ¢ ÃÂ­ÃÂºÃÂÃÂºÃÂ»ÃÂÃÂ·ÃÂ¸ÃÂ²ÃÂ½ÃÂÃÂ¹ ÃÂºÃÂ¾ÃÂ½ÃÂÃÂµÃÂ½ÃÂ\n"
+        "Ã¢ÂÂ¢ ÃÂÃÂ²ÃÂÃÂ¾ÃÂ¼ÃÂ°ÃÂÃÂ¸ÃÂ·ÃÂ°ÃÂÃÂ¸ÃÂ ÃÂ·ÃÂ°ÃÂ´ÃÂ°ÃÂ\n"
+        "Ã¢ÂÂ¢ ÃÂÃÂ¾ÃÂÃÂÃÂÃÂ¿ ÃÂº ÃÂ±ÃÂ°ÃÂ·ÃÂµ ÃÂ´ÃÂ°ÃÂ½ÃÂ½ÃÂÃÂ\n"
+        "Ã¢ÂÂ¢ ÃÂÃÂµÃÂÃÂÃÂ¾ÃÂ½ÃÂ°ÃÂ»ÃÂÃÂ½ÃÂÃÂµ ÃÂºÃÂ¾ÃÂ½ÃÂÃÂÃÂ»ÃÂÃÂÃÂ°ÃÂÃÂ¸ÃÂ¸"
     )
     await callback.message.edit_text(text, reply_markup=main_keyboard(is_subscribed(callback.from_user.id)))
 
 @dp.callback_query(F.data == "support")
 async def callback_support(callback: CallbackQuery):
     text = (
-        "ð¨âð» ÐÐ¾Ð´Ð´ÐµÑÐ¶ÐºÐ°:\n\n"
-        "ÐÑÐ»Ð¸ Ñ Ð²Ð°Ñ ÐµÑÑÑ Ð²Ð¾Ð¿ÑÐ¾ÑÑ, Ð½Ð°Ð¿Ð¸ÑÐ¸ÑÐµ Ð½Ð°Ð¼:\n"
+        "Ã°ÂÂÂ¨Ã¢ÂÂÃ°ÂÂÂ» ÃÂÃÂ¾ÃÂ´ÃÂ´ÃÂµÃÂÃÂ¶ÃÂºÃÂ°:\n\n"
+        "ÃÂÃÂÃÂ»ÃÂ¸ ÃÂ ÃÂ²ÃÂ°ÃÂ ÃÂµÃÂÃÂÃÂ ÃÂ²ÃÂ¾ÃÂ¿ÃÂÃÂ¾ÃÂÃÂ, ÃÂ½ÃÂ°ÃÂ¿ÃÂ¸ÃÂÃÂ¸ÃÂÃÂµ ÃÂ½ÃÂ°ÃÂ¼:\n"
         "@username_support\n\n"
-        "ÐÑ Ð¾ÑÐ²ÐµÑÐ°ÐµÐ¼ Ð² ÑÐµÑÐµÐ½Ð¸Ðµ 24 ÑÐ°ÑÐ¾Ð²."
+        "ÃÂÃÂ ÃÂ¾ÃÂÃÂ²ÃÂµÃÂÃÂ°ÃÂµÃÂ¼ ÃÂ² ÃÂÃÂµÃÂÃÂµÃÂ½ÃÂ¸ÃÂµ 24 ÃÂÃÂ°ÃÂÃÂ¾ÃÂ²."
     )
     await callback.message.edit_text(text, reply_markup=main_keyboard(is_subscribed(callback.from_user.id)))
 
-# Webhook Ð¾Ð±ÑÐ°Ð±Ð¾ÑÑÐ¸Ðº
+# Webhook ÃÂ¾ÃÂ±ÃÂÃÂ°ÃÂ±ÃÂ¾ÃÂÃÂÃÂ¸ÃÂº
 async def webhook_handler(request):
     try:
-        update = await request.json()
+        import json
+        body = await request.text()
+        update = json.loads(body)
         await dp.feed_update(bot, update)
         return web.Response(text="OK")
     except Exception as e:
         logger.error(f"Error processing webhook: {e}")
+        import traceback
+        traceback.print_exc()
         return web.Response(text="Error", status=500)
 
-# Health check Ð´Ð»Ñ Render
+# Health check ÃÂ´ÃÂ»ÃÂ Render
 async def health_check(request):
     return web.Response(text="OK")
 
-# ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ° Ð²ÐµÐ±-Ð¿ÑÐ¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ
+# ÃÂÃÂ°ÃÂÃÂÃÂÃÂ¾ÃÂ¹ÃÂºÃÂ° ÃÂ²ÃÂµÃÂ±-ÃÂ¿ÃÂÃÂ¸ÃÂ»ÃÂ¾ÃÂ¶ÃÂµÃÂ½ÃÂ¸ÃÂ
 async def on_startup(app):
-    # Ð£ÑÑÐ°Ð½Ð°Ð²Ð»Ð¸Ð²Ð°ÐµÐ¼ webhook
+    # ÃÂ£ÃÂÃÂÃÂ°ÃÂ½ÃÂ°ÃÂ²ÃÂ»ÃÂ¸ÃÂ²ÃÂ°ÃÂµÃÂ¼ webhook
     await bot.set_webhook(WEBHOOK_URL)
-    logger.info(f"Webhook ÑÑÑÐ°Ð½Ð¾Ð²Ð»ÐµÐ½: {WEBHOOK_URL}")
+    logger.info(f"Webhook ÃÂÃÂÃÂÃÂ°ÃÂ½ÃÂ¾ÃÂ²ÃÂ»ÃÂµÃÂ½: {WEBHOOK_URL}")
 
 async def on_shutdown(app):
-    # Ð£Ð´Ð°Ð»ÑÐµÐ¼ webhook
+    # ÃÂ£ÃÂ´ÃÂ°ÃÂ»ÃÂÃÂµÃÂ¼ webhook
     await bot.delete_webhook()
-    logger.info("Webhook ÑÐ´Ð°Ð»ÑÐ½")
+    logger.info("Webhook ÃÂÃÂ´ÃÂ°ÃÂ»ÃÂÃÂ½")
 
-# ÐÐ°Ð¿ÑÑÐº Ð²ÐµÐ±-Ð¿ÑÐ¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ
+# ÃÂÃÂ°ÃÂ¿ÃÂÃÂÃÂº ÃÂ²ÃÂµÃÂ±-ÃÂ¿ÃÂÃÂ¸ÃÂ»ÃÂ¾ÃÂ¶ÃÂµÃÂ½ÃÂ¸ÃÂ
 async def main():
     init_db()
     
@@ -364,10 +369,10 @@ async def main():
     await runner.setup()
     site = web.TCPSite(runner, WEBAPP_HOST, WEBAPP_PORT)
     
-    logger.info(f"Ð¡ÐµÑÐ²ÐµÑ Ð·Ð°Ð¿ÑÑÐµÐ½ Ð½Ð° {WEBAPP_HOST}:{WEBAPP_PORT}")
+    logger.info(f"ÃÂ¡ÃÂµÃÂÃÂ²ÃÂµÃÂ ÃÂ·ÃÂ°ÃÂ¿ÃÂÃÂÃÂµÃÂ½ ÃÂ½ÃÂ° {WEBAPP_HOST}:{WEBAPP_PORT}")
     await site.start()
     
-    # ÐÐµÑÐ¶Ð¸Ð¼ ÑÐµÑÐ²ÐµÑ Ð·Ð°Ð¿ÑÑÐµÐ½Ð½ÑÐ¼
+    # ÃÂÃÂµÃÂÃÂ¶ÃÂ¸ÃÂ¼ ÃÂÃÂµÃÂÃÂ²ÃÂµÃÂ ÃÂ·ÃÂ°ÃÂ¿ÃÂÃÂÃÂµÃÂ½ÃÂ½ÃÂÃÂ¼
     while True:
         await asyncio.sleep(3600)
 
