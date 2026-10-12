@@ -4,6 +4,7 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from typing import Optional
+from aiohttp import web
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
@@ -24,6 +25,13 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
 SUBSCRIPTION_PRICE = int(os.getenv("SUBSCRIPTION_PRICE", "100"))
 SUBSCRIPTION_DAYS = int(os.getenv("SUBSCRIPTION_DAYS", "30"))
+
+# Настройки webhook для Render
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://tg-bot-dmhf.onrender.com")
+WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
+WEBAPP_HOST = os.getenv("WEBAPP_HOST", "0.0.0.0")
+WEBAPP_PORT = int(os.getenv("PORT", "10000"))
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN не установлен в переменных окружения")
@@ -169,7 +177,7 @@ async def cmd_start(message: Message):
         f"• Доступ к премиум-контенту\n"
         f"• Приоритетная поддержка\n"
         f"• Эксклюзивные функции\n\n"
-        f"💰 Стоимость: {SUBSCRIPTION_PRICE}₽/{SUBSCRIPTION_DAYS} днays"
+        f"💰 Стоимость: {SUBSCRIPTION_PRICE}₽/{SUBSCRIPTION_DAYS} дней"
     )
     
     await message.answer(text, reply_markup=main_keyboard(subscribed))
@@ -317,16 +325,51 @@ async def callback_support(callback: CallbackQuery):
     )
     await callback.message.edit_text(text, reply_markup=main_keyboard(is_subscribed(callback.from_user.id)))
 
-# Health check для Render (предотвращает засыпание)
-@dp.message(F.text == "/health")
-async def health_check(message: Message):
-    await message.answer("✅ Бот работает!")
+# Webhook обработчик
+async def webhook_handler(request):
+    try:
+        update = await request.json()
+        await dp.feed_update(bot, update)
+        return web.Response(text="OK")
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}")
+        return web.Response(text="Error", status=500)
 
-# Запуск бота
+# Health check для Render
+async def health_check(request):
+    return web.Response(text="OK")
+
+# Настройка веб-приложения
+async def on_startup(app):
+    # Устанавливаем webhook
+    await bot.set_webhook(WEBHOOK_URL)
+    logger.info(f"Webhook установлен: {WEBHOOK_URL}")
+
+async def on_shutdown(app):
+    # Удаляем webhook
+    await bot.delete_webhook()
+    logger.info("Webhook удалён")
+
+# Запуск веб-приложения
 async def main():
     init_db()
-    logger.info("Бот запущен!")
-    await dp.start_polling(bot)
+    
+    app = web.Application()
+    app.router.add_post(WEBHOOK_PATH, webhook_handler)
+    app.router.add_get("/health", health_check)
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, WEBAPP_HOST, WEBAPP_PORT)
+    
+    logger.info(f"Сервер запущен на {WEBAPP_HOST}:{WEBAPP_PORT}")
+    await site.start()
+    
+    # Держим сервер запущенным
+    while True:
+        await asyncio.sleep(3600)
 
 if __name__ == "__main__":
     asyncio.run(main())
