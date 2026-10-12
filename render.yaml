@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: tg-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: PAYMENT_PROVIDER_TOKEN
+        sync: false
+      - key: SUBSCRIPTION_PRICE
+        value: "100"
+      - key: SUBSCRIPTION_DAYS
+        value: "30"
