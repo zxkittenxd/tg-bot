@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sqlite3
 from datetime import datetime, timedelta
 from typing import Optional
@@ -8,19 +9,24 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Конфигурация
-BOT_TOKEN = "YOUR_BOT_TOKEN"  # Замените на токен от @BotFather
-PAYMENT_PROVIDER_TOKEN = "YOUR_PAYMENT_TOKEN"  # Токен платёжного провайдера
-SUBSCRIPTION_PRICE = 100  # Цена подписки в рублях (10000 = 100₽)
-SUBSCRIPTION_DAYS = 30  # Длительность подписки в днях
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
+SUBSCRIPTION_PRICE = int(os.getenv("SUBSCRIPTION_PRICE", "100"))
+SUBSCRIPTION_DAYS = int(os.getenv("SUBSCRIPTION_DAYS", "30"))
+
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN не установлен в переменных окружения")
 
 # Инициализация бота
 bot = Bot(token=BOT_TOKEN)
@@ -163,7 +169,7 @@ async def cmd_start(message: Message):
         f"• Доступ к премиум-контенту\n"
         f"• Приоритетная поддержка\n"
         f"• Эксклюзивные функции\n\n"
-        f"💰 Стоимость: {SUBSCRIPTION_PRICE}₽/{SUBSCRIPTION_DAYS} дней"
+        f"💰 Стоимость: {SUBSCRIPTION_PRICE}₽/{SUBSCRIPTION_DAYS} днays"
     )
     
     await message.answer(text, reply_markup=main_keyboard(subscribed))
@@ -310,6 +316,11 @@ async def callback_support(callback: CallbackQuery):
         "Мы отвечаем в течение 24 часов."
     )
     await callback.message.edit_text(text, reply_markup=main_keyboard(is_subscribed(callback.from_user.id)))
+
+# Health check для Render (предотвращает засыпание)
+@dp.message(F.text == "/health")
+async def health_check(message: Message):
+    await message.answer("✅ Бот работает!")
 
 # Запуск бота
 async def main():
